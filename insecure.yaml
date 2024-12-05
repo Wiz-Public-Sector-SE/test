@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: insecure-deployment
+  labels:
+    app: insecure-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: insecure-app
+  template:
+    metadata:
+      labels:
+        app: insecure-app
+    spec:
+      containers:
+      - name: insecure-container
+        image: example/insecure-app:latest
+        ports:
+        - containerPort: 80
+        securityContext:
+          runAsUser: 0  # Dangerous: Running as root user
+          privileged: true  # Dangerous: Privileged container
+          allowPrivilegeEscalation: true  # Allows child processes to gain more privileges
+        env:
+          - name: SECRET_KEY
+            value: "verysecret"  # Bad Practice: Hardcoded secrets in YAML
+        volumeMounts:
+        - mountPath: /var/run/docker.sock
+          name: dockersock
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          failureThreshold: 1
+      volumes:
+      - name: dockersock
+        hostPath:
+          path: /var/run/docker.sock  # Dangerous: Access to host's Docker socket
+          type: Socket
